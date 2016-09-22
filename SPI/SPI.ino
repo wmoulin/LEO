@@ -15,6 +15,10 @@
 
 Adafruit_BluefruitLE_SPI ble(BLUEFRUIT_SPI_CS, BLUEFRUIT_SPI_IRQ, BLUEFRUIT_SPI_RST);
 
+void error(const __FlashStringHelper*err) {
+  Serial.println(err);
+  while (1);
+}
 void setup(void)
 {
   Serial.begin(115200);
