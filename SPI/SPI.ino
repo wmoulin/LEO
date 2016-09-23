@@ -11,14 +11,30 @@
 #include "BluefruitConfig.h"
 
 #define MODE_LED_BEHAVIOUR          "MODE"
-#define FACTORYRESET_ENABLE         1
+#define FACTORYRESET_ENABLE         0
 
 Adafruit_BluefruitLE_SPI ble(BLUEFRUIT_SPI_CS, BLUEFRUIT_SPI_IRQ, BLUEFRUIT_SPI_RST);
 
-void error(const __FlashStringHelper*err) {
-  Serial.println(err);
-  while (1);
-}
+
+
+
+int RPIN = 5;  // what PIN are you using for RED?
+int BPIN = 6; // what PIN are you using for BLUE?
+int GPIN = 9; // what PIN are you using for GREEN?
+
+String header = "186;186;170;170;";
+String data = "";
+String separator = ";";
+String cmdCode = "";
+String cmdValues = "";
+String cmdValue = "";
+int r = 0;
+int g = 0;
+int b = 0;
+
+
+
+
 void setup(void)
 {
   Serial.begin(115200);
@@ -72,6 +88,17 @@ void setup(void)
   ble.setMode(BLUEFRUIT_MODE_DATA);
 
   Serial.println(F("******************************"));
+
+  setAllLedlight(255, 0, 0);
+  delay(2000);
+
+  setAllLedlight(0, 255, 0);
+  delay(2000);
+
+  setAllLedlight(0, 0, 255);
+  delay(2000);
+
+  setAllLedlight(0, 0, 0);
 }
 
 
@@ -93,16 +120,66 @@ void loop(void)
   }
 
   // Echo received data
-  while ( ble.available() )
+  if ( ble.available() )
   {
-    int c = ble.read();
-
-    Serial.print((char)c);
-
-    // Hex output too, helps w/debugging!
-    Serial.print(" [0x");
-    if (c <= 0xF) Serial.print(F("0"));
-    Serial.print(c, HEX);
-    Serial.print("] ");
+    Serial.print("bluetooth write : "); 
+    data = "";
+    delay(100);
+    while ( ble.available() )
+    {
+      byte toSend = (byte)ble.read();
+      Serial.print((char)toSend);
+      data.concat(String(toSend, DEC));
+      data.concat(separator);
+    }
+    extractCommand();
+    execCommand();
   }
+}
+void setAllLedlight(int redValue, int greenValue, int blueValue) {
+  setLedlight(RPIN, redValue);
+  setLedlight(GPIN, greenValue);
+  setLedlight(BPIN, blueValue);
+}
+
+void setLedlight(int pin, int value) {
+  analogWrite(pin,map(value, 0, 255, 0, 1023));
+}
+
+void execCommand() {
+  switch (cmdCode.toInt()) {
+    case 3:
+     r = nextCommandValue();
+      g = nextCommandValue();
+      b = nextCommandValue();
+      setAllLedlight(r, g, b);
+      break;
+    case 2:
+      //do something when var equals 2
+      break;
+    default: 
+      // if nothing else matches, do the default
+      // default is optional
+    break;
+  }
+  
+}
+
+void extractCommand() {
+  if (data.startsWith(header)) {
+    String cmd = data.substring(data.indexOf(header) + header.length());
+    cmdCode = cmd.substring(0, cmd.indexOf(separator));
+    cmdValues = cmd.substring(cmd.indexOf(separator) + 1);
+  }
+}
+
+int nextCommandValue() {
+  cmdValue = cmdValues.substring(0, cmdValues.indexOf(separator));
+  cmdValues = cmdValues.substring(cmdValues.indexOf(separator) + 1);
+  return cmdValue.toInt();
+}
+
+void error(const __FlashStringHelper*err) {
+  Serial.println(err);
+  while (1);
 }
