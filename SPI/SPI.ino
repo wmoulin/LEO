@@ -10,17 +10,13 @@
 
 #include "BluefruitConfig.h"
 
-#define MODE_LED_BEHAVIOUR          "MODE"
-#define FACTORYRESET_ENABLE         0
+#include "MotorConfig.h"
 
 Adafruit_BluefruitLE_SPI ble(BLUEFRUIT_SPI_CS, BLUEFRUIT_SPI_IRQ, BLUEFRUIT_SPI_RST);
 
-
-
-
-int RPIN = 5;  // what PIN are you using for RED?
-int BPIN = 6; // what PIN are you using for BLUE?
-int GPIN = 9; // what PIN are you using for GREEN?
+int RPIN = 13;  // what PIN are you using for RED?
+int BPIN = 11; // what PIN are you using for BLUE?
+int GPIN = 10; // what PIN are you using for GREEN?
 
 String header = "186;186;170;170;";
 String data = "";
@@ -28,12 +24,12 @@ String separator = ";";
 String cmdCode = "";
 String cmdValues = "";
 String cmdValue = "";
+
 int r = 0;
 int g = 0;
 int b = 0;
 
-
-
+int motorDirection = 0;
 
 void setup(void)
 {
@@ -46,116 +42,68 @@ void setup(void)
 
   if ( !ble.begin(VERBOSE_MODE) )
   {
-    error(F("Couldn't find Bluefruit, make sure it's in CoMmanD mode & check wiring?"));
+    Serial.println(F("Couldn't find Bluefruit, make sure it's in CoMmanD mode & check wiring?"));
   }
   Serial.println( F("OK!") );
-
-  if ( FACTORYRESET_ENABLE )
-  {
-    /* Perform a factory reset to make sure everything is in a known state */
-    Serial.println(F("Performing a factory reset: "));
-    if ( ! ble.factoryReset() ){
-      error(F("Couldn't factory reset"));
-    }
-  }
 
   /* Disable command echo from Bluefruit */
   ble.echo(false);
 
   Serial.println("Requesting Bluefruit info:");
-  /* Print Bluefruit information */
-  ble.info();
-
-  Serial.println(F("Please use Adafruit Bluefruit LE app to connect in UART mode"));
-  Serial.println(F("Then Enter characters to send to Bluefruit"));
-  Serial.println();
-
   ble.verbose(false);  // debug info is a little annoying after this point!
-
-  /* Wait for connection */
-  while (! ble.isConnected()) {
-      delay(500);
-  }
-
-  Serial.println(F("******************************"));
-
-  Serial.println(F("Change LED activity to " MODE_LED_BEHAVIOUR));
-  ble.sendCommandCheckOK("AT+HWModeLED=" MODE_LED_BEHAVIOUR);
-
-
-  // Set module to DATA mode
-  Serial.println( F("Switching to DATA mode!") );
   ble.setMode(BLUEFRUIT_MODE_DATA);
-
-  Serial.println(F("******************************"));
-
   setAllLedlight(255, 0, 0);
-  delay(2000);
+  delay(500);
 
   setAllLedlight(0, 255, 0);
-  delay(2000);
+  delay(500);
 
   setAllLedlight(0, 0, 255);
-  delay(2000);
+  delay(500);
 
-  setAllLedlight(0, 0, 0);
+  setAllLedlight(0, 0, 0);  
 }
 
 
 void loop(void)
 {
-  // Check for user input
-  char n, inputs[BUFSIZE+1];
-
-  if (Serial.available())
-  {
-    n = Serial.readBytes(inputs, BUFSIZE);
-    inputs[n] = 0;
-    // Send characters to Bluefruit
-    Serial.print("Sending: ");
-    Serial.println(inputs);
-
-    // Send input data to host via Bluefruit
-    ble.print(inputs);
+  if (! ble.isConnected()) {
+    return;
   }
 
-  // Echo received data
   if ( ble.available() )
   {
     Serial.print("bluetooth write : "); 
     data = "";
-    delay(100);
+
     while ( ble.available() )
     {
       byte toSend = (byte)ble.read();
-      Serial.print((char)toSend);
       data.concat(String(toSend, DEC));
       data.concat(separator);
     }
+    
+    Serial.println(data);
+
     extractCommand();
     execCommand();
   }
 }
-void setAllLedlight(int redValue, int greenValue, int blueValue) {
-  setLedlight(RPIN, redValue);
-  setLedlight(GPIN, greenValue);
-  setLedlight(BPIN, blueValue);
-}
-
-void setLedlight(int pin, int value) {
-  analogWrite(pin,map(value, 0, 255, 0, 1023));
-}
 
 void execCommand() {
+  
   switch (cmdCode.toInt()) {
     case 3:
-     r = nextCommandValue();
+      Serial.println("Led command");
+      r = nextCommandValue();
       g = nextCommandValue();
       b = nextCommandValue();
       setAllLedlight(r, g, b);
       break;
     case 2:
-      //do something when var equals 2
+      Serial.println("Motor command");
+      motorDirection = nextCommandValue();
+      activateMotors(motorDirection);
       break;
     default: 
       // if nothing else matches, do the default
@@ -179,7 +127,89 @@ int nextCommandValue() {
   return cmdValue.toInt();
 }
 
-void error(const __FlashStringHelper*err) {
-  Serial.println(err);
-  while (1);
+// LED
+void setAllLedlight(int redValue, int greenValue, int blueValue) {
+  setLedlight(RPIN, redValue);
+  setLedlight(GPIN, greenValue);
+  setLedlight(BPIN, blueValue);
 }
+
+void setLedlight(int pin, int value) {
+  analogWrite(pin,map(value, 0, 255, 0, 1023));
+}
+
+// MOTOR
+void activateMotors(int pDirection) {
+  switch (pDirection) {
+    case STOP:
+      Serial.println("Stop");
+      activateMotor(MOTOR_1, STOP, POWER_MAX);
+      activateMotor(MOTOR_2, STOP, POWER_MAX);
+      break;
+    case FRONT:
+      Serial.println("Front");
+      activateMotor(MOTOR_1, FRONT, POWER_MAX);
+      activateMotor(MOTOR_2, FRONT, POWER_MAX);
+      break;
+    case BACK:
+      Serial.println("back");
+      activateMotor(MOTOR_1, BACK, POWER_MAX);
+      activateMotor(MOTOR_2, BACK, POWER_MAX);
+      break;
+    case LEFT:
+      Serial.println("Left");
+      activateMotor(MOTOR_1, STOP, POWER_OFF);
+      activateMotor(MOTOR_2, FRONT, POWER_MAX);
+      break;
+    case RIGHT:
+      Serial.println("Right");
+      activateMotor(MOTOR_1, FRONT, POWER_MAX);
+      activateMotor(MOTOR_2, STOP, POWER_OFF);
+      break;
+    case TORNADO:
+      Serial.println("Tornado");
+      activateMotor(MOTOR_1, FRONT, POWER_MAX);
+      activateMotor(MOTOR_2, BACK, POWER_MAX);
+      break;
+    default: 
+    break;
+  }
+
+}
+
+void activateMotor(int pMotor,int pDirection,int pPuissance) {
+  int pin1, etat1, pin2, etat2, pinP, puissance;
+  
+  //test numéro du moteur
+  if (pMotor == MOTOR_1){
+    pin1=MOTOR_1_1;
+    pin2=MOTOR_1_2;
+    pinP=MOTOR_1_P;
+  } else if (pMotor == MOTOR_2) {
+    pin1=MOTOR_2_1;
+    pin2=MOTOR_2_2;
+    pinP=MOTOR_2_P;
+  } else {
+    return;
+  }
+  
+  //test sens du moteur 1,-1 (sens contrainre) ou tout autre valeur (stoppe le moteur)
+  if (pDirection == FRONT){
+    etat1 = 1;
+    etat2 = 0;
+  } else if (pDirection == BACK) {
+    etat1 = 0;
+    etat2 = 1;
+  } else {
+    etat1 = 0;
+    etat2 = 0;
+  }
+  
+  puissance = map(pPuissance, 0, 100, 0, 255);
+  
+  analogWrite(pinP, puissance);
+  digitalWrite(pin1, etat1);
+  digitalWrite(pin2, etat2);
+
+}
+
