@@ -26,7 +26,8 @@
 #define BACK       2
 #define LEFT       3
 #define RIGHT      4
-#define TORNADO    5
+#define TORNADO_L  5
+#define TORNADO_R  6
 
 // power
 #define POWER_MAX     100

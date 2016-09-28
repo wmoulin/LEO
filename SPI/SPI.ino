@@ -166,8 +166,12 @@ void activateMotors(int pDirection) {
       activateMotor(MOTOR_1, FRONT, POWER_MAX);
       activateMotor(MOTOR_2, STOP, POWER_OFF);
       break;
-    case TORNADO:
-      Serial.println("Tornado");
+    case TORNADO_L:
+      Serial.println("Tornado Left");
+      activateMotor(MOTOR_1, BACK, POWER_MAX);
+      activateMotor(MOTOR_2, FRONT, POWER_MAX);
+    case TORNADO_R:
+      Serial.println("Tornado Right");
       activateMotor(MOTOR_1, FRONT, POWER_MAX);
       activateMotor(MOTOR_2, BACK, POWER_MAX);
       break;
