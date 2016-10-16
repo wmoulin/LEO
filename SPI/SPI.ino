@@ -61,7 +61,15 @@ void setup(void)
   setAllLedlight(0, 0, 255);
   delay(500);
 
-  setAllLedlight(0, 0, 0);  
+  setAllLedlight(0, 0, 0);
+
+  pinMode(MOTOR_1_1, OUTPUT);
+  pinMode(MOTOR_1_2, OUTPUT);
+  pinMode(MOTOR_1_P, OUTPUT);
+
+  pinMode(MOTOR_2_1, OUTPUT);
+  pinMode(MOTOR_2_2, OUTPUT);
+  pinMode(MOTOR_2_P, OUTPUT);
 }
 
 
@@ -143,8 +151,8 @@ void activateMotors(int pDirection) {
   switch (pDirection) {
     case STOP:
       Serial.println("Stop");
-      activateMotor(MOTOR_1, STOP, POWER_MAX);
-      activateMotor(MOTOR_2, STOP, POWER_MAX);
+      activateMotor(MOTOR_1, STOP, POWER_OFF);
+      activateMotor(MOTOR_2, STOP, POWER_OFF);
       break;
     case FRONT:
       Serial.println("Front");
@@ -158,7 +166,7 @@ void activateMotors(int pDirection) {
       break;
     case LEFT:
       Serial.println("Left");
-      activateMotor(MOTOR_2, STOP, POWER_OFF);
+      activateMotor(MOTOR_2, STOP, POWER_MAX);
       activateMotor(MOTOR_1, FRONT, POWER_MAX);
       break;
     case RIGHT:
@@ -170,6 +178,7 @@ void activateMotors(int pDirection) {
       Serial.println("Tornado Left");
       activateMotor(MOTOR_2, BACK, POWER_MAX);
       activateMotor(MOTOR_1, FRONT, POWER_MAX);
+      break;
     case TORNADO_R:
       Serial.println("Tornado Right");
       activateMotor(MOTOR_2, FRONT, POWER_MAX);
@@ -210,10 +219,15 @@ void activateMotor(int pMotor,int pDirection,int pPuissance) {
   }
   
   puissance = map(pPuissance, 0, 100, 0, 255);
-  
-  analogWrite(pinP, puissance);
+  Serial.print("puissance : ");
+  Serial.println(puissance);
+  Serial.print("etat1 : ");
+  Serial.println(etat1);
+  Serial.print("etat2 : ");
+  Serial.println(etat2);
   digitalWrite(pin1, etat1);
   digitalWrite(pin2, etat2);
+  analogWrite(pinP, puissance);
 
 }
 
